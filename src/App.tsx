@@ -1,37 +1,56 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { APITester } from "./APITester";
-import "./index.css";
+import { useEffect, useRef, useState } from "react";
+import "./App.css";
+import reactLogo from "./assets/react.svg";
 
-import logo from "./logo.svg";
-import reactLogo from "./react.svg";
+interface Result {
+  id: number;
+  result: number;
+}
 
-export function App() {
+function App() {
+  const [results, setResults] = useState<Result[]>([]);
+  const [time, setTime] = useState(new Date().toLocaleTimeString());
+
+  const idRef = useRef(1);
+  const workerRef = useRef<Worker>(null);
+
+  useEffect(() => {
+    workerRef.current = new Worker(
+      new URL("./workers/fibWorker.ts", import.meta.url),
+      { type: "module" },
+    );
+    workerRef.current.onmessage = (e: MessageEvent<Result>) => {
+      setResults((prev) => [...prev, e.data]);
+    };
+  }, []);
+
+  const handleClick = () => {
+    if (workerRef.current) {
+      workerRef.current.postMessage({ id: idRef.current++, n: 42 });
+    }
+  };
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setTime(new Date().toLocaleTimeString());
+    }, 1000);
+    return () => clearInterval(interval);
+  }, []);
+
   return (
-    <div className="container mx-auto p-8 text-center relative z-10">
-      <div className="flex justify-center items-center gap-8 mb-8">
-        <img
-          src={logo}
-          alt="Bun Logo"
-          className="h-36 p-6 transition-all duration-300 hover:drop-shadow-[0_0_2em_#646cffaa] scale-120"
-        />
-        <img
-          src={reactLogo}
-          alt="React Logo"
-          className="h-36 p-6 transition-all duration-300 hover:drop-shadow-[0_0_2em_#61dafbaa] [animation:spin_20s_linear_infinite]"
-        />
-      </div>
-      <Card>
-        <CardHeader className="gap-4">
-          <CardTitle className="text-3xl font-bold">Bun + React</CardTitle>
-          <CardDescription>
-            Edit <code className="rounded bg-muted px-[0.3rem] py-[0.2rem] font-mono">src/App.tsx</code> and save to
-            test HMR
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <APITester />
-        </CardContent>
-      </Card>
+    <div className="container">
+      <img src={reactLogo} className="logo react spin" alt="React logo" />
+
+      <div className="clock">{time}</div>
+
+      <button onClick={handleClick}>Calcular Fibonacci(42)</button>
+      <ul>
+        {results.map((r) => (
+          <li key={r.id}>
+            Tarefa {r.id}: {r.result}
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }
